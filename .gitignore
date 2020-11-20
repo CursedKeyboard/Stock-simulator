@@ -1,4 +1,3 @@
-# Just some personal organization things
-dependencies
-gui-start
-.vscode
+dependencies/
+.vscode/
+gui-start/
