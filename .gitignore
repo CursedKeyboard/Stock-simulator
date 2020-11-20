@@ -1,3 +1,5 @@
 dependencies/
 .vscode/
 gui-start/
+
+test.db

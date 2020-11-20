@@ -6,7 +6,7 @@ class User():
     """ A user in the program """
 
     def __init__(self, file_name: str):
-        self.load_datab(file_name)
+        self.load_data(file_name)
         self.file = file_name
         dp.log(f"Finished loading user data")
     
