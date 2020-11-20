@@ -10,6 +10,17 @@ class User():
         self.file = file_name
         dp.log(f"Finished loading user data")
     
+    def __str__(self) -> str:
+        """ Return a string representation of this User """
+        s = ""
+        s += "Shares: \n"
+        for share_name in self.share_by_name:
+            s += self.share_by_name[share_name] + "\n"
+      
+        s += "Starting funds: " + str(self.start_funds) + "\n"
+        s += "Current funds: " + str(self.current_balance)
+        return s
+
     def load_data(self, file_name: str):
         """
         Method to load user data in <self> using database provided by <file_name>. 
@@ -28,11 +39,12 @@ class User():
             else:
                 self.share_by_name[share_name] = list(share[1:])
 
-        user_data = conn.execute("SELECT * FROM user_data")
+        user_data = conn.execute("SELECT * FROM data").fetchone()
         self.start_funds = user_data[0]
         self.current_balance = user_data[1]
+        self.start_date = user_data[2]
     
-    def buy_share(self, share: Share, amount) -> None:
+    def buy_share(self, share, amount) -> None:
         """ Buy <amount> shares for the User """
         self.current_balance -= share.get_price() * amount
         conn = sqlite3.connect(self.file)

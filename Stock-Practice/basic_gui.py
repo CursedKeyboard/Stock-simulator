@@ -2,6 +2,10 @@ import dearpygui.core as gg
 from dearpygui.simple import *
 from new_user import create_database, get_user_data
 import os
+import User
+import yahoo_fin.stock_info as yfs
+from typing import Dict
+import datetime
 
 gg.show_logger()
 gg.set_log_level(gg.mvTRACE)
@@ -47,7 +51,7 @@ def create_new_user_gui():
                 gg.log_error("Balance must be greater than 0$!")
                 return
             
-            create_database(initial_data["User Name"] + ".db", initial_data["Start Balance"])
+            (initial_data["User Name"] + ".db", initial_data["Start Balance"])
             gg.delete_item("Main")
             initial_screen()
         
@@ -69,6 +73,7 @@ def initial_screen():
         gg.add_button("New", callback=change_to_new_user)
 
 def choose_user_screen():
+
     with window("Choose User",width=600):
 
         # headers = ("USERNAME", "STARTING BALANCE", "CURRENT BALANCE", "DATE CREATED", "")
@@ -82,6 +87,11 @@ def choose_user_screen():
             gg.add_text("")
         gg.add_separator()
 
+        def load_user(sender, data):
+            user = User.User(data["file_name"] + ".db")
+            gg.delete_item("Choose User")
+            MainGui(user)
+
         for file in os.listdir():
             count = 1
             if(file[-3:]) == ".db":
@@ -92,9 +102,82 @@ def choose_user_screen():
                     gg.add_text(f"{initial_balance}")
                     gg.add_text(f"{current_balance}")
                     gg.add_text(f"{date_created}")
-                    gg.add_button(f"load {user_name}")
+                    gg.add_button(f"load {user_name}", callback=load_user, callback_data={"file_name": user_name})
                 gg.add_separator()
                 count += 1
+
+class MainGui():
+    
+    main_tickers = ["AAPL", "MSFT", "AMD", "TSLA"]
+
+    def __init__(self, user: User.User):
+        self.user = User
+        self.dashboard_stocks()
+
+    def menu(self, *args):
+        with menu_bar("Menu"):
+            gg.add_menu_item("User", enabled=not args[0])
+            gg.add_menu_item("Stocks", enabled=not args[1])
+            gg.add_menu_item("My Stocks", enabled =not args[2])
+            gg.add_menu_item("Watchlist", enabled=not args[3])
+            if (len(args) == 5):
+                gg.add_menu_item(args[4], enabled=False)
+
+    def dashboard_stocks(self):
+        with window("Dashboard", width=500, height=500):
+            self.menu(False, True, False, False)
+            gg.add_separator()
+            with managed_columns("headers", 3):
+                gg.add_text("TICKER")
+                gg.add_text("LIVE PRICE")
+                gg.add_text("MY SHARES")
+            for ticker in self.main_tickers:
+                gg.add_separator()
+                with managed_columns(ticker + "col", 3):
+                    live_price = round(yfs.get_live_price(ticker), 3)
+                    gg.add_button(ticker, callback=self.info_single_stock, callback_data={"Ticker": ticker, 
+                    "Previous Window": "Dashboard"})
+                    gg.add_text(str(live_price))
+                    try:
+                        gg.add_text(str(self.user.share_by_name[ticker][-1]))
+                    except AttributeError:
+                        gg.add_text("0")
+            gg.add_separator()  
+
+    def info_single_stock(self, sender, data: Dict[str, str]):
+        gg.delete_item(data["Previous Window"])
+        ticker = data["Ticker"]
+        with window(ticker + "##window", width=500, height=500):
+            self.menu(False, False, False, False, data["Ticker"])
+            ticker_data = yfs.get_quote_table(ticker, dict_result=True)
+            date_time = datetime.datetime.now()
+            time = date_time.time()
+            date = date_time.date()
+            with group("day_info"):
+                gg.add_text("Date: " + str(date), color=[255,0,0])
+                gg.add_text("Time: " + str(time), color=[255,0,0])
+
+            gg.add_separator()
+            with managed_columns("day_info_ticker", columns=3):
+                gg.add_text("Last close: " + str(ticker_data["Previous Close"]))
+                gg.add_text("Open price: " + str(ticker_data["Open"]))
+                gg.add_text("Current price: " + str(round(ticker_data["Quote Price"], 3)))
+
+            gg.add_separator()
+            date_data_since = date - datetime.timedelta(365)
+            table_monthly_interval_data = yfs.get_data(ticker, start_date=date_data_since, interval="1mo")
+            gg.add_table("monthly_data", headers=["date"] + [header for header in table_monthly_interval_data])
+            for date in table_monthly_interval_data.index:
+                list_values = [str(date)[:10]]
+                list_values.extend(list(table_monthly_interval_data.loc[date]))
+                for i in range(len(list_values)):
+                    if type(list_values[i]) == str:
+                        continue
+                    else:
+                        list_values[i] = str(round(list_values[i], 3))
+                gg.add_row("monthly_data", list_values)
+
+
 
 if __name__ == "__main__":
     initial_screen()
