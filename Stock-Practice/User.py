@@ -2,6 +2,7 @@ import sqlite3
 from typing import List
 import dearpygui.core as dp
 
+
 class User():
     """ A user in the program """
 
@@ -43,14 +44,14 @@ class User():
         self.start_funds = user_data[0]
         self.current_balance = user_data[1]
         self.start_date = user_data[2]
-    
-    def buy_share(self, share, amount) -> None:
+
+    def buy_share(self, amount: float, price: float, ticker: str, date: str, time: str) -> None:
         """ Buy <amount> shares for the User """
-        self.current_balance -= share.get_price() * amount
+        self.current_balance -= round(price * amount, 2)q
         conn = sqlite3.connect(self.file)
-        conn.execute
-
-
-    
-
-
+        conn.execute(""" INSERT INTO shares VALUES (?, ?, ?, ?, ?)""", (ticker, date, time, price, amount))
+        print(self.current_balance)
+        print(conn.execute(""" SELECT balance FROM data """).fetchone())
+        conn.execute(""" UPDATE data SET balance = ?""", (self.current_balance,))
+        conn.commit()
+        conn.close()

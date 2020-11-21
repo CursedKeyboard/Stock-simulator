@@ -1,7 +1,8 @@
 import sqlite3
 import datetime
 
-def create_database(file_name: str,initial_funds: float):
+
+def create_database(file_name: str, initial_funds: float):
     conn = sqlite3.connect(file_name)
     c = conn.cursor()
     c.execute(

@@ -38,24 +38,28 @@ def create_new_user_gui():
             }
 
             if not initial_data["User Name"].isalpha():
-                gg.add_label_text("Error", color=(255, 0, 0), before="##balance_input",label="Username must be alphabetical")
+                gg.add_label_text("Error", color=(255, 0, 0),
+                                  before="##balance_input",label="Username must be alphabetical")
                 gg.log_error("User-name must be only alphabets")
                 return
             elif initial_data["User Name"] + ".db" in os.listdir():
-                gg.add_label_text("Error", color=(255, 0, 0), before="##balance_input",label="Username already exists!")
+                gg.add_label_text("Error", color=(255, 0, 0),
+                                  before="##balance_input",label="Username already exists!")
                 gg.log_error("User-name must be unique")
                 return
 
             if initial_data["Start Balance"] <= 0:
-                gg.add_label_text("Error_start_balance", color=(255, 0, 0, 1), before="Proceed",label="Balance must be greater than 0$")
+                gg.add_label_text("Error_start_balance",
+                                  color=(255, 0, 0, 1), before="Proceed",label="Balance must be greater than 0$")
                 gg.log_error("Balance must be greater than 0$!")
                 return
             
-            (initial_data["User Name"] + ".db", initial_data["Start Balance"])
+            create_database(initial_data["User Name"] + ".db", initial_data["Start Balance"])
             gg.delete_item("Main")
             initial_screen()
         
         gg.add_button("Proceed", callback=create_new_user_data)
+
 
 def initial_screen():
     with window("Main"):
@@ -71,6 +75,7 @@ def initial_screen():
             create_new_user_gui()
 
         gg.add_button("New", callback=change_to_new_user)
+
 
 def choose_user_screen():
 
@@ -106,12 +111,13 @@ def choose_user_screen():
                 gg.add_separator()
                 count += 1
 
+
 class MainGui():
     
     main_tickers = ["AAPL", "MSFT", "AMD", "TSLA"]
 
     def __init__(self, user: User.User):
-        self.user = User
+        self.user = user
         self.dashboard_stocks()
 
     def menu(self, *args):
@@ -120,7 +126,7 @@ class MainGui():
             gg.add_menu_item("Stocks", enabled=not args[1])
             gg.add_menu_item("My Stocks", enabled =not args[2])
             gg.add_menu_item("Watchlist", enabled=not args[3])
-            if (len(args) == 5):
+            if len(args) == 5:
                 gg.add_menu_item(args[4], enabled=False)
 
     def dashboard_stocks(self):
@@ -140,7 +146,7 @@ class MainGui():
                     gg.add_text(str(live_price))
                     try:
                         gg.add_text(str(self.user.share_by_name[ticker][-1]))
-                    except AttributeError:
+                    except KeyError:
                         gg.add_text("0")
             gg.add_separator()  
 
@@ -158,12 +164,25 @@ class MainGui():
                 gg.add_text("Time: " + str(time), color=[255,0,0])
 
             gg.add_separator()
+            gg.add_text("Today")
+            gg.add_separator()
             with managed_columns("day_info_ticker", columns=3):
                 gg.add_text("Last close: " + str(ticker_data["Previous Close"]))
                 gg.add_text("Open price: " + str(ticker_data["Open"]))
                 gg.add_text("Current price: " + str(round(ticker_data["Quote Price"], 3)))
-
             gg.add_separator()
+
+            with group("Extra info", horizontal=True):
+                with group("Extra Info##1"):
+                    gg.add_text("Volume: " + str(ticker_data["Volume"]), bullet=True)
+                    gg.add_text("Market Cap: " + str(ticker_data["Market Cap"]), bullet=True)
+            
+                with group("Extra info##2"):
+                    gg.add_text("52 Week Range: " + str(ticker_data["52 Week Range"]), bullet=True)
+                    gg.add_text("1y Target Estimate: " + str(ticker_data["1y Target Est"]), bullet=True)
+
+            gg.add_spacing(count=10)
+
             date_data_since = date - datetime.timedelta(365)
             table_monthly_interval_data = yfs.get_data(ticker, start_date=date_data_since, interval="1mo")
             gg.add_table("monthly_data", headers=["date"] + [header for header in table_monthly_interval_data])
@@ -177,6 +196,29 @@ class MainGui():
                         list_values[i] = str(round(list_values[i], 3))
                 gg.add_row("monthly_data", list_values)
 
+            gg.add_spacing(count=2)
+            price = ticker_data["Quote Price"]
+
+            def purchase_stocks(sender, data):
+                total_price = gg.get_value("Quantity") * price
+                print(str(self.user.current_balance), str(total_price))
+                if self.user.current_balance < total_price:
+                    gg.add_text("Cannot purchase, insufficient funds", before="Buy Shares", color=[255,0,0])
+                else:
+                    self.user.buy_share(gg.get_value("Quantity"), price, ticker, str(date), str(time))
+
+            def get_dynamic_cost(sender, data):
+                cost = gg.get_value("Quantity") * price
+                gg.delete_item("Cost: ")
+                gg.add_label_text("Cost: ", label=f"Total cost:{cost}", parent="Stock amount buy")
+
+            with group("Buy Stock Group"):
+                with group("Stock amount buy", horizontal=True):
+                    gg.add_input_float("##Stock volume", tip="Number of stocks you want to buy", default_value=0,
+                                       width=100, source="Quantity")
+                    gg.add_label_text("Cost: ", label="Cost: 0")
+                    gg.set_render_callback(get_dynamic_cost)
+                gg.add_button("Buy Shares", callback=purchase_stocks)
 
 
 if __name__ == "__main__":
