@@ -3,4 +3,5 @@ dependencies/
 gui-start/
 
 *.db
-Stock-Practice/__pcache__/*
+*.pyc
+*.pyo
