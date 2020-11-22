@@ -2,5 +2,5 @@ dependencies/
 .vscode/
 gui-start/
 
-test.db
-Stock-Practice/__pycache__
+*.db
+Stock-Practice/__pcache__/*

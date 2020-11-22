@@ -97,8 +97,8 @@ def choose_user_screen():
             gg.delete_item("Choose User")
             MainGui(user)
 
+        count = 1
         for file in os.listdir():
-            count = 1
             if(file[-3:]) == ".db":
                 user_name = file[:-3]
                 initial_balance, current_balance, date_created = get_user_data(file)
@@ -145,7 +145,7 @@ class MainGui():
                     "Previous Window": "Dashboard"})
                     gg.add_text(str(live_price))
                     try:
-                        gg.add_text(str(self.user.share_by_name[ticker][-1]))
+                        gg.add_text(str(self.user.share_quantity[ticker]))
                     except KeyError:
                         gg.add_text("0")
             gg.add_separator()  
@@ -159,9 +159,21 @@ class MainGui():
             date_time = datetime.datetime.now()
             time = date_time.time()
             date = date_time.date()
-            with group("day_info"):
-                gg.add_text("Date: " + str(date), color=[255,0,0])
-                gg.add_text("Time: " + str(time), color=[255,0,0])
+            with group("heading", horizontal=True):
+                with group("day_info"):
+                    gg.add_text("Date: " + str(date), color=[255, 0, 0])
+                    gg.add_text("Time: " + str(time), color=[255, 0, 0])
+                with group("user_info"):
+                    gg.add_label_text("Current Balance", label=f"Current Balance: {self.user.current_balance}",
+                                      color=[255, 0, 0])
+                    try:
+                        gg.add_label_text("Current Shares",
+                                          label=f"Number of shares: {self.user.share_quantity[ticker]}",
+                                          color=[0, 255, 0])
+                    except KeyError:
+                        gg.add_label_text("Current Shares",
+                                          label=f"Number of shares: 0",
+                                          color=[0, 255, 0])
 
             gg.add_separator()
             gg.add_text("Today")
@@ -169,7 +181,7 @@ class MainGui():
             with managed_columns("day_info_ticker", columns=3):
                 gg.add_text("Last close: " + str(ticker_data["Previous Close"]))
                 gg.add_text("Open price: " + str(ticker_data["Open"]))
-                gg.add_text("Current price: " + str(round(ticker_data["Quote Price"], 3)))
+                gg.add_text("Current price: " + str(round(ticker_data["Quote Price"], 2)))
             gg.add_separator()
 
             with group("Extra info", horizontal=True):
@@ -183,6 +195,7 @@ class MainGui():
 
             gg.add_spacing(count=10)
 
+            # Table of share data on first day of each month since 365 days ago
             date_data_since = date - datetime.timedelta(365)
             table_monthly_interval_data = yfs.get_data(ticker, start_date=date_data_since, interval="1mo")
             gg.add_table("monthly_data", headers=["date"] + [header for header in table_monthly_interval_data])
@@ -197,31 +210,36 @@ class MainGui():
                 gg.add_row("monthly_data", list_values)
 
             gg.add_spacing(count=2)
-            price = ticker_data["Quote Price"]
+            price = round(ticker_data["Quote Price"], 3)
 
             def purchase_stocks(sender, data):
-                total_price = gg.get_value("Quantity") * price
-                print(str(self.user.current_balance), str(total_price))
+                quantity = round(gg.get_value("Quantity"), 2)
+                total_price = quantity * price
+                gg.set_item_color("Message", style=1, color=[255, 0, 0])
                 if self.user.current_balance < total_price:
-                    gg.add_text("Cannot purchase, insufficient funds", before="Buy Shares", color=[255,0,0])
+                    set_item_label("Message", "Cannot purchase, insufficient funds")
+                elif 0 >= total_price:
+                    set_item_label("Message", "Must spend more than 0$")
                 else:
-                    self.user.buy_share(gg.get_value("Quantity"), price, ticker, str(date), str(time))
-
-            def get_dynamic_cost(sender, data):
-                cost = gg.get_value("Quantity") * price
-                gg.delete_item("Cost: ")
-                gg.add_label_text("Cost: ", label=f"Total cost:{cost}", parent="Stock amount buy")
+                    set_item_label("Message", f"Purchase of {quantity} {ticker} shares at {price} made")
+                    gg.set_item_color("Message", style=1, color=[0, 255, 0])
+                    self.user.buy_share(quantity, price, ticker, str(date), str(time))
+                    set_item_label("Current Balance", f"Current Balance: {self.user.current_balance}")
+                    set_item_label("Current Shares", f"Number of shares: {self.user.share_quantity[ticker]}")
 
             with group("Buy Stock Group"):
-                with group("Stock amount buy", horizontal=True):
-                    gg.add_input_float("##Stock volume", tip="Number of stocks you want to buy", default_value=0,
-                                       width=100, source="Quantity")
-                    gg.add_label_text("Cost: ", label="Cost: 0")
-                    gg.set_render_callback(get_dynamic_cost)
+                def get_dynamic_cost(sender, data):
+                    # TODO dynamic colouring
+                    cost = round(gg.get_value("Quantity") * price, 2)
+                    set_item_label("Stock volume", f"Total Cost: {cost}")
+
+                gg.add_input_float("Stock volume", default_value=0,
+                                   width=100, source="Quantity", label="Total cost: 0",
+                                   callback=get_dynamic_cost, on_enter=True)
+                gg.add_label_text("Message", label="", color=[255, 0, 0])
                 gg.add_button("Buy Shares", callback=purchase_stocks)
 
 
 if __name__ == "__main__":
     initial_screen()
-
     gg.start_dearpygui()
