@@ -1,8 +1,8 @@
 import dearpygui.core as gg
 from dearpygui.simple import *
-from new_user import create_database, get_user_data
+from .database_functions import create_database, get_user_data
 import os
-import User
+from .User import User
 import yahoo_fin.stock_info as yfs
 from typing import Dict
 import datetime
@@ -93,7 +93,7 @@ def choose_user_screen():
         gg.add_separator()
 
         def load_user(sender, data):
-            user = User.User(data["file_name"] + ".db")
+            user = User(data["file_name"] + ".db")
             gg.delete_item("Choose User")
             MainGui(user)
 
@@ -116,7 +116,7 @@ class MainGui():
     
     main_tickers = ["AAPL", "MSFT", "AMD", "TSLA"]
 
-    def __init__(self, user: User.User):
+    def __init__(self, user: User):
         self.user = user
         self.dashboard_stocks()
 
