@@ -163,17 +163,17 @@ class MainGui():
                 with group("day_info"):
                     gg.add_text("Date: " + str(date), color=[255, 0, 0])
                     gg.add_text("Time: " + str(time), color=[255, 0, 0])
-                with group("user_info"):
-                    gg.add_label_text("Current Balance", label=f"Current Balance: {self.user.current_balance}",
-                                      color=[255, 0, 0])
-                    try:
-                        gg.add_label_text("Current Shares",
-                                          label=f"Number of shares: {self.user.share_quantity[ticker]}",
-                                          color=[0, 255, 0])
-                    except KeyError:
-                        gg.add_label_text("Current Shares",
-                                          label=f"Number of shares: 0",
-                                          color=[0, 255, 0])
+            with menu_bar("user_info"):
+                gg.add_label_text("Current Balance", label=f"Current Balance: {self.user.current_balance}",
+                                  color=[255, 0, 0])
+                try:
+                    gg.add_label_text("Current Shares",
+                                      label=f"Number of shares: {self.user.share_quantity[ticker]}",
+                                      color=[0, 255, 0])
+                except KeyError:
+                    gg.add_label_text("Current Shares",
+                                      label=f"Number of shares: 0",
+                                      color=[0, 255, 0])
 
             gg.add_separator()
             gg.add_text("Today")
