@@ -1,8 +1,8 @@
 import dearpygui.core as gg
 from dearpygui.simple import *
-from .database_functions import create_database, get_user_data
+from database_functions import create_database, get_user_data
 import os
-from .User import User
+from User import User
 import yahoo_fin.stock_info as yfs
 from typing import Dict
 import datetime
@@ -38,19 +38,19 @@ def create_new_user_gui():
             }
 
             if not initial_data["User Name"].isalpha():
-                gg.add_label_text("Error", color=(255, 0, 0),
-                                  before="##balance_input",label="Username must be alphabetical")
+                gg.add_label_text("Error", color=[255, 0, 0],
+                                  before="##balance_input", label="Username must be alphabetical")
                 gg.log_error("User-name must be only alphabets")
                 return
             elif initial_data["User Name"] + ".db" in os.listdir():
-                gg.add_label_text("Error", color=(255, 0, 0),
+                gg.add_label_text("Error", color=[255, 0, 0],
                                   before="##balance_input",label="Username already exists!")
                 gg.log_error("User-name must be unique")
                 return
 
             if initial_data["Start Balance"] <= 0:
                 gg.add_label_text("Error_start_balance",
-                                  color=(255, 0, 0, 1), before="Proceed",label="Balance must be greater than 0$")
+                                  color=[255, 0, 0], before="Proceed",label="Balance must be greater than 0$")
                 gg.log_error("Balance must be greater than 0$!")
                 return
             
@@ -153,7 +153,7 @@ class MainGui():
     def info_single_stock(self, sender, data: Dict[str, str]):
         gg.delete_item(data["Previous Window"])
         ticker = data["Ticker"]
-        with window(ticker + "##window", width=500, height=500):
+        with window(ticker + "##window", width=500, height=500, no_scrollbar=False):
             self.menu(False, False, False, False, data["Ticker"])
             ticker_data = yfs.get_quote_table(ticker, dict_result=True)
             date_time = datetime.datetime.now()
@@ -199,9 +199,9 @@ class MainGui():
             date_data_since = date - datetime.timedelta(365)
             table_monthly_interval_data = yfs.get_data(ticker, start_date=date_data_since, interval="1mo")
             gg.add_table("monthly_data", headers=["date"] + [header for header in table_monthly_interval_data])
-            for date in table_monthly_interval_data.index:
-                list_values = [str(date)[:10]]
-                list_values.extend(list(table_monthly_interval_data.loc[date]))
+            for date_index in table_monthly_interval_data.index:
+                list_values = [str(date_index)[:10]]
+                list_values.extend(list(table_monthly_interval_data.loc[date_index]))
                 for i in range(len(list_values)):
                     if type(list_values[i]) == str:
                         continue
@@ -210,6 +210,28 @@ class MainGui():
                 gg.add_row("monthly_data", list_values)
 
             gg.add_spacing(count=2)
+
+            def make_plot():
+                date_data_since = date - datetime.timedelta(30)
+                scatter_plot_weekly_data = yfs.get_data(ticker, start_date=date_data_since, interval="1d")
+                indecis = [x for x in scatter_plot_weekly_data.index]
+                start_date = indecis[0]
+                x_axis = [(x - start_date).days for x in indecis]
+                y_axis_max = [scatter_plot_weekly_data.loc[x]['high'] for x in indecis]
+                y_axis_min = [scatter_plot_weekly_data.loc[x]['low'] for x in indecis]
+                gg.add_plot("30 Day Price Fluctuation", height=300, scale_max=.5,
+                            x_axis_name=f"Days since {start_date}", y_axis_name="Single share price")
+                gg.add_scatter_series("30 Day Price Fluctuation", "Day High", x=x_axis, y=y_axis_max, size=3)
+                gg.add_scatter_series("30 Day Price Fluctuation", "Day Low", x=x_axis, y=y_axis_min, marker=1, size=3)
+
+                # Set initial plot view
+                gg.set_plot_xlimits("30 Day Price Fluctuation", 0, 30)
+                gg.set_plot_ylimits("30 Day Price Fluctuation", min(y_axis_min)*.97, max(y_axis_max)*1.03)
+                gg.set_plot_ylimits_auto("30 Day Price Fluctuation")
+                gg.set_plot_xlimits_auto("30 Day Price Fluctuation")
+
+            make_plot()
+            # Create purchase button and what not
             price = round(ticker_data["Quote Price"], 3)
 
             def purchase_stocks(sender, data):
@@ -241,5 +263,6 @@ class MainGui():
 
 
 if __name__ == "__main__":
+    gg.add_additional_font(f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}/arial.ttf")
     initial_screen()
     gg.start_dearpygui()
