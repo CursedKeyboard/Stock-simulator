@@ -148,7 +148,22 @@ class MainGui():
                         gg.add_text(str(self.user.share_quantity[ticker]))
                     except KeyError:
                         gg.add_text("0")
-            gg.add_separator()  
+            gg.add_separator()
+
+            def go_to_single_stock_info(sender, data):
+                input_ticker = gg.get_value(sender)
+                data["Ticker"] = input_ticker
+                if str(yfs.get_live_price(input_ticker)) == 'nan':
+                    set_item_label("Search ticker input", label=f"No ticker called {input_ticker} found")
+                    return
+                else:
+                    set_item_label("Search ticker input", label="Loading...")
+                    self.info_single_stock(sender, data)
+
+            gg.add_input_text(name="Search ticker input", width=100,
+                              default_value='AAPL', tip="Search for a stock ticker", label="Get Ticker Info",
+                              callback=go_to_single_stock_info,
+                              callback_data={"Previous Window": "Dashboard"}, on_enter=True, uppercase=True)
 
     def info_single_stock(self, sender, data: Dict[str, str]):
         gg.delete_item(data["Previous Window"])
