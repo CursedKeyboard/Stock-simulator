@@ -174,13 +174,11 @@ class MainGui():
             date_time = datetime.datetime.now()
             time = date_time.time()
             date = date_time.date()
+            price = round(ticker_data["Quote Price"], 2)
             with group("heading", horizontal=True):
                 with group("day_info"):
                     gg.add_text("Date: " + str(date), color=[255, 0, 0])
                     gg.add_text("Time: " + str(time), color=[255, 0, 0])
-            with menu_bar("user_info"):
-                gg.add_label_text("Current Balance", label=f"Current Balance: {self.user.current_balance}",
-                                  color=[255, 0, 0])
                 try:
                     gg.add_label_text("Current Shares",
                                       label=f"Number of shares: {self.user.share_quantity[ticker]}",
@@ -189,6 +187,9 @@ class MainGui():
                     gg.add_label_text("Current Shares",
                                       label=f"Number of shares: 0",
                                       color=[0, 255, 0])
+            with menu_bar("user_info"):
+                gg.add_label_text("Current Balance", label=f"Current Balance: {self.user.current_balance}",
+                                  color=[255, 0, 0])
 
             gg.add_separator()
             gg.add_text("Today")
@@ -196,7 +197,7 @@ class MainGui():
             with managed_columns("day_info_ticker", columns=3):
                 gg.add_text("Last close: " + str(ticker_data["Previous Close"]))
                 gg.add_text("Open price: " + str(ticker_data["Open"]))
-                gg.add_text("Current price: " + str(round(ticker_data["Quote Price"], 2)))
+                gg.add_text("Current price: " + str(price))
             gg.add_separator()
 
             with group("Extra info", horizontal=True):
@@ -206,9 +207,18 @@ class MainGui():
             
                 with group("Extra info##2"):
                     gg.add_text("52 Week Range: " + str(ticker_data["52 Week Range"]), bullet=True)
-                    gg.add_text("1y Target Estimate: " + str(ticker_data["1y Target Est"]), bullet=True)
+                    one_year_estimate = ticker_data["1y Target Est"]
+                    if one_year_estimate > price:
+                        percent_change = round((one_year_estimate / price) * 10, 2)
+                        colour = [0, 255, 0]
+                    else:
+                        percent_change = round((price / one_year_estimate) * 10, 2)
+                        colour = [255, 0, 0]
+                    with group("1Y estimate", horizontal=True):
+                        gg.add_text(f"1y Target Estimate: {ticker_data['1y Target Est']} |", bullet=True)
+                        gg.add_text(f"{percent_change}%", color=colour)
 
-            gg.add_spacing(count=10)
+            gg.add_spacing(count=5)
 
             # Table of share data on first day of each month since 365 days ago
             date_data_since = date - datetime.timedelta(365)
@@ -247,7 +257,6 @@ class MainGui():
 
             make_plot()
             # Create purchase button and what not
-            price = round(ticker_data["Quote Price"], 3)
 
             def purchase_stocks(sender, data):
                 quantity = round(gg.get_value("Quantity"), 2)
