@@ -81,8 +81,6 @@ def choose_user_screen():
 
     with window("Choose User",width=600):
 
-        # headers = ("USERNAME", "STARTING BALANCE", "CURRENT BALANCE", "DATE CREATED", "")
-        # gg.add_table("files", headers=headers)
         gg.add_separator()
         with managed_columns("row", 5):
             gg.add_text("USERNAME")
@@ -112,7 +110,7 @@ def choose_user_screen():
                 count += 1
 
 
-class MainGui():
+class MainGui:
     
     main_tickers = ["AAPL", "MSFT", "AMD", "TSLA"]
 
@@ -120,18 +118,22 @@ class MainGui():
         self.user = user
         self.dashboard_stocks()
 
-    def menu(self, *args):
+    def menu(self, curr_window_name, *args):
+        def change_to_window(sender, data):
+            scene = data["Scene Function"]
+            gg.delete_item(curr_window_name)
+            scene()
+
         with menu_bar("Menu"):
             gg.add_menu_item("User", enabled=not args[0])
-            gg.add_menu_item("Stocks", enabled=not args[1])
-            gg.add_menu_item("My Stocks", enabled =not args[2])
+            gg.add_menu_item("Stocks", enabled=not args[1], callback=change_to_window,
+                             callback_data={"Scene Function": self.dashboard_stocks})
+            gg.add_menu_item("My Stocks", enabled=not args[2])
             gg.add_menu_item("Watchlist", enabled=not args[3])
-            if len(args) == 5:
-                gg.add_menu_item(args[4], enabled=False)
 
     def dashboard_stocks(self):
         with window("Dashboard", width=500, height=500):
-            self.menu(False, True, False, False)
+            self.menu("Dashboard", False, True, False, False)
             gg.add_separator()
             with managed_columns("headers", 3):
                 gg.add_text("TICKER")
@@ -169,7 +171,7 @@ class MainGui():
         gg.delete_item(data["Previous Window"])
         ticker = data["Ticker"]
         with window(ticker + "##window", width=500, height=500, no_scrollbar=False):
-            self.menu(False, False, False, False, data["Ticker"])
+            self.menu(ticker + "##window", False, False, False, False)
             ticker_data = yfs.get_quote_table(ticker, dict_result=True)
             date_time = datetime.datetime.now()
             time = date_time.time()
@@ -187,7 +189,8 @@ class MainGui():
                     gg.add_label_text("Current Shares",
                                       label=f"Number of shares: 0",
                                       color=[0, 255, 0])
-            with menu_bar("user_info"):
+            with menu_bar("local_info"):
+                gg.add_menu_item("ticker", label=ticker, enabled=False)
                 gg.add_label_text("Current Balance", label=f"Current Balance: {self.user.current_balance}",
                                   color=[255, 0, 0])
 
