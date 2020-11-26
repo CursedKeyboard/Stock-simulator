@@ -1,9 +1,10 @@
 import sqlite3
 from typing import List, Tuple
 import dearpygui.core as dp
+import datetime
 
 
-class User():
+class User:
     """ A user in the program """
 
     def __init__(self, file_name: str):
@@ -39,11 +40,19 @@ class User():
             share_quantity = share_data[-1]
             self.update_share_map(share_name, share_data)
             self.update_share_count(share_name, share_quantity)
+        dp.log("Loaded share data")
 
         user_data = conn.execute("SELECT * FROM data").fetchone()
         self.start_funds = user_data[0]
         self.current_balance = user_data[1]
         self.start_date = user_data[2]
+        dp.log("Loaded user data")
+
+        watchlist_data = conn.execute("SELECT * FROM watchlist")
+        self.watchlist = {}
+        for row in watchlist_data:
+            ticker, price_when_added, date_added = row[0], row[1], row[2]
+            self.add_to_watchlist(ticker, price_when_added, date_added)
 
     def buy_share(self, amount: float, price: float, ticker: str, date: str, time: str) -> None:
         """ Buy <amount> shares for the User """
@@ -62,7 +71,25 @@ class User():
 
         conn.close()
 
-    def update_share_count(self, share_name: int, share_count: float):
+    def add_to_watchlist(self, share_name: str, share_price: str, date_added: str = str(datetime.date.today())):
+        """ Add <share_name> to the watchlist and update it accordingly """
+        if share_name in self.watchlist:
+            raise ValueError(f"{share_name} already in watchlist")
+        else:
+            self.watchlist[share_name] = (share_price, date_added)
+
+    def remove_from_watchlist(self, share_name):
+        if share_name not in self.watchlist:
+            raise KeyError(f"{share_name} not in watchlist!")
+        else:
+            self.watchlist.pop(share_name)
+
+        conn = sqlite3.connect(self.file)
+        conn.execute("DELETE FROM watchlist WHERE ticker = ?", (share_name,))
+        conn.commit()
+        conn.close()
+
+    def update_share_count(self, share_name: str, share_count: float):
         """ Update the share count of a ticker accordingly"""
         if share_name in self.share_quantity:
             self.share_quantity[share_name] += share_count

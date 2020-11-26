@@ -16,10 +16,16 @@ def create_database(file_name: str, initial_funds: float):
         (start_funds real,balance real, date_created text)
         """
     )
-    
+
+    c.execute(
+        """CREATE TABLE watchlist
+        (ticker text UNIQUE, price_when_added real, date_added text)
+        """)
+
     c.execute("INSERT INTO data VALUES (?, ?, ?)", (initial_funds, initial_funds, str(datetime.date.today())))
     conn.commit()
     conn.close()
+
 
 def get_user_data(file_name: str) -> tuple:
     """ Return user data from sql file """
