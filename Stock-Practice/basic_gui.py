@@ -118,22 +118,26 @@ class MainGui:
         self.user = user
         self.dashboard_stocks()
 
-    def menu(self, curr_window_name, *args):
-        def change_to_window(sender, data):
-            scene = data["Scene Function"]
-            gg.delete_item(curr_window_name)
+    def change_to_window(self, sender, data):
+        scene = data["Scene Function"]
+        gg.delete_item(gg.get_active_window())
+        try:
+            scene(data['kwargs'])
+        except KeyError:
             scene()
+
+    def menu(self, *args):
 
         with menu_bar("Menu"):
             gg.add_menu_item("User", enabled=not args[0])
-            gg.add_menu_item("Stocks", enabled=not args[1], callback=change_to_window,
+            gg.add_menu_item("Stocks", enabled=not args[1], callback=self.change_to_window,
                              callback_data={"Scene Function": self.dashboard_stocks})
             gg.add_menu_item("My Stocks", enabled=not args[2])
             gg.add_menu_item("Watchlist", enabled=not args[3])
 
     def dashboard_stocks(self):
         with window("Dashboard", width=500, height=500):
-            self.menu("Dashboard", False, True, False, False)
+            self.menu(False, True, False, False)
             gg.add_separator()
             with managed_columns("headers", 3):
                 gg.add_text("TICKER")
@@ -143,8 +147,9 @@ class MainGui:
                 gg.add_separator()
                 with managed_columns(ticker + "col", 3):
                     live_price = round(yfs.get_live_price(ticker), 3)
-                    gg.add_button(ticker, callback=self.info_single_stock, callback_data={"Ticker": ticker, 
-                    "Previous Window": "Dashboard"})
+                    gg.add_button(ticker, callback=self.change_to_window,
+                                  callback_data={"Scene Function": self.info_single_stock,
+                                                 "kwargs": {"Ticker": ticker}})
                     gg.add_text(str(live_price))
                     try:
                         gg.add_text(str(self.user.share_quantity[ticker]))
@@ -154,24 +159,26 @@ class MainGui:
 
             def go_to_single_stock_info(sender, data):
                 input_ticker = gg.get_value(sender)
-                data["Ticker"] = input_ticker
                 if str(yfs.get_live_price(input_ticker)) == 'nan':
                     set_item_label("Search ticker input", label=f"No ticker called {input_ticker} found")
                     return
                 else:
                     set_item_label("Search ticker input", label="Loading...")
-                    self.info_single_stock(sender, data)
+                    self.change_to_window(sender,
+                                          {"Scene Function": self.info_single_stock,
+                                           "kwargs": {"Ticker": input_ticker}})
 
             gg.add_input_text(name="Search ticker input", width=100,
                               default_value='AAPL', tip="Search for a stock ticker", label="Get Ticker Info",
-                              callback=go_to_single_stock_info,
-                              callback_data={"Previous Window": "Dashboard"}, on_enter=True, uppercase=True)
+                              callback=go_to_single_stock_info, on_enter=True, uppercase=True)
 
-    def info_single_stock(self, sender, data: Dict[str, str]):
-        gg.delete_item(data["Previous Window"])
+    def watchlist_stocks(self):
+        pass
+
+    def info_single_stock(self, data: dict):
         ticker = data["Ticker"]
         with window(ticker + "##window", width=500, height=500, no_scrollbar=False):
-            self.menu(ticker + "##window", False, False, False, False)
+            self.menu(False, False, False, False)
             ticker_data = yfs.get_quote_table(ticker, dict_result=True)
             date_time = datetime.datetime.now()
             time = date_time.time()
