@@ -52,7 +52,7 @@ class User:
         self.watchlist = {}
         for row in watchlist_data:
             ticker, price_when_added, date_added = row[0], row[1], row[2]
-            self.add_to_watchlist(ticker, price_when_added, date_added)
+            self.add_to_watchlist(ticker, price_when_added, False, date_added)
 
     def buy_share(self, amount: float, price: float, ticker: str, date: str, time: str) -> None:
         """ Buy <amount> shares for the User """
@@ -71,18 +71,26 @@ class User:
 
         conn.close()
 
-    def add_to_watchlist(self, share_name: str, share_price: str, date_added: str = str(datetime.date.today())):
+    def add_to_watchlist(self, share_name: str, share_price: str, database: bool,
+                         date_added: str = str(datetime.date.today())):
         """ Add <share_name> to the watchlist and update it accordingly """
         if share_name in self.watchlist:
             raise ValueError(f"{share_name} already in watchlist")
         else:
             self.watchlist[share_name] = (share_price, date_added)
+            if database:
+                conn = sqlite3.connect(self.file)
+                conn.execute(" INSERT INTO watchlist VALUES (?, ?, ?)", (share_name, share_price, date_added))
+                conn.commit()
+                conn.close()
 
     def remove_from_watchlist(self, share_name):
         if share_name not in self.watchlist:
             raise KeyError(f"{share_name} not in watchlist!")
         else:
             self.watchlist.pop(share_name)
+            conn = sqlite3.connect(self.file)
+            conn.execute(" DELETE FROM watchlist WHERE ticker = (?)", (share_name,))
 
         conn = sqlite3.connect(self.file)
         conn.execute("DELETE FROM watchlist WHERE ticker = ?", (share_name,))

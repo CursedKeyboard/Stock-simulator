@@ -34,7 +34,14 @@ def get_user_data(file_name: str) -> tuple:
     initial_current_dateCreated = conn.execute("SELECT * FROM data").fetchone()
     c.close()
     return initial_current_dateCreated
-    
+
+
+def get_user_watchlist_data(file_name: str) -> tuple:
+    """ Return user watchlist data """
+    conn = sqlite3.connect(file_name)
+    data = conn.execute("SELECT * FROM watchlist").fetchall()
+    conn.close()
+    return data
 
 if __name__ == "__main__":
     create_database("test.db", 100)

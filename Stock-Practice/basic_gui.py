@@ -1,6 +1,6 @@
 import dearpygui.core as gg
 from dearpygui.simple import *
-from database_functions import create_database, get_user_data
+from database_functions import create_database, get_user_data, get_user_watchlist_data
 import os
 from User import User
 import yahoo_fin.stock_info as yfs
@@ -15,6 +15,9 @@ gg.log_info("info message")
 gg.log_warning("warning message")
 gg.log_error("error message")
 
+
+def get_percent_change(comparison_to: float, comparator: float):
+    return round(100 - round((comparison_to/comparator) * 100, 2),2)
 
 def create_new_user_gui():
     with window("Main"):
@@ -133,7 +136,8 @@ class MainGui:
             gg.add_menu_item("Stocks", enabled=not args[1], callback=self.change_to_window,
                              callback_data={"Scene Function": self.dashboard_stocks})
             gg.add_menu_item("My Stocks", enabled=not args[2])
-            gg.add_menu_item("Watchlist", enabled=not args[3])
+            gg.add_menu_item("Watchlist", enabled=not args[3], callback=self.change_to_window,
+                             callback_data={"Scene Function": self.watchlist_stocks})
 
     def dashboard_stocks(self):
         with window("Dashboard", width=500, height=500):
@@ -173,7 +177,35 @@ class MainGui:
                               callback=go_to_single_stock_info, on_enter=True, uppercase=True)
 
     def watchlist_stocks(self):
-        pass
+        with window("Watchlist Window", width=500, height=500):
+            self.menu(False, False, False, True)
+            watchlist_data = get_user_watchlist_data(self.user.file)
+            gg.add_separator()
+            with managed_columns("headers", 4):
+                gg.add_text("TICKER")
+                gg.add_text("PRICE WHEN ADDED")
+                gg.add_text("DATE ADDED")
+                gg.add_text("REMOVE")
+
+            def remove_from_watchlist(sender, data):
+                self.user.remove_from_watchlist(data["Ticker"])
+                gg.delete_item(f"{data['Ticker']} row")
+
+            for row in watchlist_data:
+                ticker_name, price_when_added, str_date_added = row[0], row[1], row[2]
+                gg.add_separator()
+                with managed_columns(f"{ticker_name} row", 4):
+                    gg.add_button(name=ticker_name,
+                                  callback=self.change_to_window,
+                                  callback_data={"Scene Function": self.info_single_stock,
+                                                 "kwargs": {"Ticker": ticker_name}})
+                    s = f"{price_when_added} | "
+                    s += f"{get_percent_change(float(price_when_added), yfs.get_live_price(ticker_name))}%"
+                    gg.add_text(s)
+                    gg.add_text(str_date_added)
+                    gg.add_button(f"Remove {ticker_name}", label="Remove", callback=remove_from_watchlist,
+                                  callback_data={"Ticker": ticker_name})
+            gg.add_separator()
 
     def info_single_stock(self, data: dict):
         ticker = data["Ticker"]
@@ -218,12 +250,12 @@ class MainGui:
                 with group("Extra info##2"):
                     gg.add_text("52 Week Range: " + str(ticker_data["52 Week Range"]), bullet=True)
                     one_year_estimate = ticker_data["1y Target Est"]
+                    percent_change = get_percent_change(price, one_year_estimate)
                     if one_year_estimate > price:
-                        percent_change = round((one_year_estimate / price) * 10, 2)
                         colour = [0, 255, 0]
                     else:
-                        percent_change = round((price / one_year_estimate) * 10, 2)
                         colour = [255, 0, 0]
+
                     with group("1Y estimate", horizontal=True):
                         gg.add_text(f"1y Target Estimate: {ticker_data['1y Target Est']} |", bullet=True)
                         gg.add_text(f"{percent_change}%", color=colour)
@@ -283,18 +315,33 @@ class MainGui:
                     set_item_label("Current Balance", f"Current Balance: {self.user.current_balance}")
                     set_item_label("Current Shares", f"Number of shares: {self.user.share_quantity[ticker]}")
 
-            with group("Buy Stock Group"):
-                def get_dynamic_cost(sender, data):
-                    # TODO dynamic colouring
-                    cost = round(gg.get_value("Quantity") * price, 2)
-                    set_item_label("Stock volume", f"Total Cost: {cost}")
+            def add_to_watchlist(sender, data):
+                self.user.add_to_watchlist(ticker, price, database=True)
+                set_item_label(sender, "Remove From Watchlist")
+                gg.set_item_callback(sender, remove_from_watchlist)
 
-                gg.add_input_float("Stock volume", default_value=0,
-                                   width=100, source="Quantity", label="Total cost: 0",
-                                   callback=get_dynamic_cost, on_enter=True)
-                gg.add_label_text("Message", label="", color=[255, 0, 0])
-                gg.add_button("Buy Shares", callback=purchase_stocks)
+            def remove_from_watchlist(sender, data):
+                self.user.remove_from_watchlist(ticker)
+                set_item_label(sender, "Add To Watchlist")
+                gg.set_item_callback(sender, add_to_watchlist)
 
+            with group("footer", horizontal=True):
+                with group("Buy Stock Group"):
+                    def get_dynamic_cost(sender, data):
+                        # TODO dynamic colouring
+                        cost = round(gg.get_value("Quantity") * price, 2)
+                        set_item_label("Stock volume", f"Total Cost: {cost}")
+
+                    gg.add_input_float("Stock volume", default_value=0,
+                                       width=100, source="Quantity", label="Total cost: 0",
+                                       callback=get_dynamic_cost, on_enter=True)
+                    gg.add_label_text("Message", label="", color=[255, 0, 0])
+                    gg.add_button("Buy Shares", callback=purchase_stocks)
+                with group("Stock Watchlist"):
+                    if ticker not in self.user.watchlist:
+                        gg.add_button("Watchlist Button", callback=add_to_watchlist, label="Add To Watchlist")
+                    else:
+                        gg.add_button("Watchlist Button", callback=remove_from_watchlist, label="Remove From Watchlist")
 
 if __name__ == "__main__":
     gg.add_additional_font(f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}/arial.ttf")
