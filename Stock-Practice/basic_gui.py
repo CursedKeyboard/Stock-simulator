@@ -132,12 +132,33 @@ class MainGui:
     def menu(self, *args):
 
         with menu_bar("Menu"):
-            gg.add_menu_item("User", enabled=not args[0])
+            gg.add_menu_item("User", enabled=not args[0], callback=self.change_to_window,
+                             callback_data={"Scene Function": self.user_dashboard})
             gg.add_menu_item("Stocks", enabled=not args[1], callback=self.change_to_window,
                              callback_data={"Scene Function": self.dashboard_stocks})
-            gg.add_menu_item("My Stocks", enabled=not args[2])
+            gg.add_menu_item("My Stocks", enabled=not args[2], callback=self.change_to_window,
+                             callback_data={"Scene Function": self.user_stock_dash})
             gg.add_menu_item("Watchlist", enabled=not args[3], callback=self.change_to_window,
                              callback_data={"Scene Function": self.watchlist_stocks})
+
+    def user_dashboard(self):
+        with window("User Dash", width=500, height=500):
+            self.menu(True, False, False, False)
+            with group("Basic user info", horizontal=True):
+                gg.add_text(f"Username: {self.user.file[:-3]}")
+                gg.add_text(f"Starting Balance: {self.user.start_funds}")
+                net_worth = round(sum(self.user.share_quantity[ticker]*yfs.get_live_price(ticker)
+                                 for ticker in self.user.share_quantity), 2) + self.user.current_balance
+                gg.add_text(f"Net Worth: {net_worth}")
+            with group("Tables", horizontal=True):
+                gg.add_table("Your Watchlist", headers=["Watchlist Ticker Name"], width=150)
+                for stock in self.user.watchlist:
+                    gg.add_row("Your Watchlist", [f"{stock}"])
+                gg.add_table("Your stocks", headers=["Ticker Name", "Date", "Quantity"])
+                for stock in self.user.share_by_name:
+                    for share_data in self.user.share_by_name[stock]:
+                        row = [stock, share_data[0], str(share_data[-1])]
+                        gg.add_row("Your stocks", row)
 
     def dashboard_stocks(self):
         with window("Dashboard", width=500, height=500):
@@ -185,7 +206,7 @@ class MainGui:
                 gg.add_text("TICKER")
                 gg.add_text("PRICE WHEN ADDED")
                 gg.add_text("DATE ADDED")
-                gg.add_text("REMOVE")
+                gg.add_text("")
 
             def remove_from_watchlist(sender, data):
                 self.user.remove_from_watchlist(data["Ticker"])
@@ -206,6 +227,29 @@ class MainGui:
                     gg.add_button(f"Remove {ticker_name}", label="Remove", callback=remove_from_watchlist,
                                   callback_data={"Ticker": ticker_name})
             gg.add_separator()
+
+    def user_stock_dash(self):
+        with window("User stock dashboard", width=500, height=500):
+            self.menu(False, False, True, False)
+            with managed_columns("Header", 6):
+                gg.add_text("TICKER")
+                gg.add_text("DATE ADDED")
+                gg.add_text("BUY PRICE")
+                gg.add_text("SELL PRICE")
+                gg.add_text("QUANTITY")
+                gg.add_text("SELL")
+            for ticker in self.user.share_by_name:
+                ticker_buy_data = self.user.share_by_name[ticker]
+                current_price = round(yfs.get_live_price(ticker), 2)
+                for event in ticker_buy_data:
+                    date, time, buy_price, qty = event
+                    with managed_columns(f"Data {ticker}{date}{time}", columns=6):
+                        gg.add_text(ticker)
+                        gg.add_text(date)
+                        gg.add_text(str(buy_price))
+                        gg.add_text(str(current_price))
+                        gg.add_text(str(qty))
+                        gg.add_button(f"Sell {ticker}{date}{time}", label="Sell")
 
     def info_single_stock(self, data: dict):
         ticker = data["Ticker"]
@@ -342,6 +386,7 @@ class MainGui:
                         gg.add_button("Watchlist Button", callback=add_to_watchlist, label="Add To Watchlist")
                     else:
                         gg.add_button("Watchlist Button", callback=remove_from_watchlist, label="Remove From Watchlist")
+
 
 if __name__ == "__main__":
     gg.add_additional_font(f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}/arial.ttf")
