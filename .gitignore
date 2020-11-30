@@ -1,6 +1,7 @@
 dependencies/
 .vscode/
 gui-start/
+.idea
 
 *.db
 *.pyc
