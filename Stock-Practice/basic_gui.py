@@ -157,7 +157,7 @@ class MainGui:
                 gg.add_table("Your stocks", headers=["Ticker Name", "Date", "Quantity"])
                 for stock in self.user.share_by_name:
                     for share_data in self.user.share_by_name[stock]:
-                        row = [stock, share_data[0], str(share_data[-1])]
+                        row = [stock, share_data[1], str(share_data[-1])]
                         gg.add_row("Your stocks", row)
 
     def dashboard_stocks(self):
@@ -231,25 +231,48 @@ class MainGui:
     def user_stock_dash(self):
         with window("User stock dashboard", width=500, height=500):
             self.menu(False, False, True, False)
-            with managed_columns("Header", 6):
+            gg.add_separator()
+            with managed_columns("Header", 5):
                 gg.add_text("TICKER")
-                gg.add_text("DATE ADDED")
-                gg.add_text("BUY PRICE")
-                gg.add_text("SELL PRICE")
+                gg.add_text("DATE")
+                gg.add_text("BUY $ / SELL $")
                 gg.add_text("QUANTITY")
                 gg.add_text("SELL")
+
+            def sell_stock(sender, data):
+                buy_data = data["Purchase Data"]
+                purchaseid, date_bought, time_bought, buy_price, quantity_buy = buy_data
+                quantity_sell = round(gg.get_value(sender), 2)
+                label = f"Message"
+                if quantity_sell > quantity_buy:
+                    set_item_label(label, f"Cannot sell more than {quantity_buy}!")
+                else:
+                    self.user.sell_share(data["Ticker"], purchaseid, quantity_sell, data["Sell Price"])
+                    self.change_to_window(sender, {"Scene Function": self.user_stock_dash})
+                    set_item_label(label, f"Sold {quantity_sell} shares at {data['Sell Price']}$")
+                    
             for ticker in self.user.share_by_name:
                 ticker_buy_data = self.user.share_by_name[ticker]
                 current_price = round(yfs.get_live_price(ticker), 2)
                 for event in ticker_buy_data:
-                    date, time, buy_price, qty = event
-                    with managed_columns(f"Data {ticker}{date}{time}", columns=6):
+                    purchaseid, date, time, buy_price, qty = event
+                    gg.add_separator()
+                    with managed_columns(f"Data {ticker}{purchaseid}", columns=5, border=True):
                         gg.add_text(ticker)
                         gg.add_text(date)
-                        gg.add_text(str(buy_price))
-                        gg.add_text(str(current_price))
-                        gg.add_text(str(qty))
-                        gg.add_button(f"Sell {ticker}{date}{time}", label="Sell")
+                        gg.add_text(f"{buy_price} / {current_price}")
+                        gg.add_label_text(name=f"{purchaseid} qty", label=str(qty))
+                        with group(f"Sell{ticker}{purchaseid}"):
+                            gg.add_input_float(name=f"##Sell {ticker}{purchaseid} input", default_value=0,
+                                               on_enter=True,
+                                               callback=sell_stock, callback_data={"Ticker": ticker,
+                                                                                   "Purchase Data": event,
+                                                                                   "Sell Price": current_price},
+                                               format="%.2f",
+                                               width=80)
+
+            gg.add_separator()
+            gg.add_button("Message", label="")
 
     def info_single_stock(self, data: dict):
         ticker = data["Ticker"]

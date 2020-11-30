@@ -6,8 +6,8 @@ def create_database(file_name: str, initial_funds: float):
     conn = sqlite3.connect(file_name)
     c = conn.cursor()
     c.execute(
-        """CREATE TABLE shares
-        (name text,date text,time text,price real,qty real)
+        """CREATE TABLE shares_bought
+        (purchaseid integer primary key, name text,date text,time text,price real,qty real)
         """
     )   
     
@@ -22,6 +22,12 @@ def create_database(file_name: str, initial_funds: float):
         (ticker text UNIQUE, price_when_added real, date_added text)
         """)
 
+    c.execute(
+        """CREATE TABLE shares_sold
+        (sellid integer primary key, ticker text, 
+        qtysold real, price real, revenue real, date text, time text, sharebought integer, 
+        FOREIGN KEY(sharebought) REFERENCES shares_bought(purchaseid))"""
+    )
     c.execute("INSERT INTO data VALUES (?, ?, ?)", (initial_funds, initial_funds, str(datetime.date.today())))
     conn.commit()
     conn.close()
