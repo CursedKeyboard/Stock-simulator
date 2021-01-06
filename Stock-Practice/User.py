@@ -114,7 +114,7 @@ class User:
             self.share_quantity[share_name] = share_count
             self.share_quantity[share_name] = round(self.share_quantity[share_name], 2)
 
-    def update_share_map(self, share_name, share_data: list[int, str, str, float, float]):
+    def update_share_map(self, share_name, share_data):
         """ Update the share map of a user's owned shares accordingly"""
         if share_name in self.share_by_name:
             self.share_by_name[share_name].append(share_data)
@@ -141,7 +141,7 @@ class User:
         self.current_balance += revenue
         self.current_balance = round(self.current_balance, 2)
         conn.execute(""" UPDATE data SET balance = ?""", (self.current_balance,))
-        self.update_share_count(ticker, -qty)
+        self.update_share_count(ticker, -qty)li
         old_quantity = \
             conn.execute(""" SELECT qty FROM shares_bought WHERE purchaseid = ?""", (purchaseid,)).fetchone()[0]
         new_quantity = round(old_quantity - qty, 2)
