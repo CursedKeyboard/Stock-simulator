@@ -7,13 +7,13 @@ import yahoo_fin.stock_info as yfs
 from typing import Dict
 import datetime
 
-gg.show_logger()
-gg.set_log_level(gg.mvTRACE)
-gg.log("trace message")
-gg.log_debug("debug message")
-gg.log_info("info message")
-gg.log_warning("warning message")
-gg.log_error("error message")
+# gg.show_logger()
+# gg.set_log_level(gg.mvTRACE)
+# gg.log("trace message")
+# gg.log_debug("debug message")
+# gg.log_info("info message")
+# gg.log_warning("warning message")
+# gg.log_error("error message")
 
 
 def get_percent_change(comparison_to: float, comparator: float):
