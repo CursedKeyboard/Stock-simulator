@@ -1,7 +1,7 @@
 # Stock-simulator
 A prototype stock practicer
 
-![Basic Demo](https://github.com/CursedKeyboard/Stock-simulator/blob/readme_file/stock_simulator.gif)
+![Basic Demo](https://github.com/CursedKeyboard/Stock-simulator/blob/master/stock_simulator.gif)
 
 # Installation
 1. Create a new virtual environment using
@@ -27,10 +27,10 @@ python Stock-Practice/basic_gui.py
 ```
 When you run the program, you will be greeted by the ability to create a new account.
 
-![title screen](https://github.com/CursedKeyboard/Stock-simulator/blob/readme_file/main_screen.JPG)
+![title screen](https://github.com/CursedKeyboard/Stock-simulator/blob/master/main_screen.JPG)
 
 Click new and choose an account name, and your intended starting dollar amount.
 
-![account creation screen](https://github.com/CursedKeyboard/Stock-simulator/blob/readme_file/account_creation.JPG)
+![account creation screen](https://github.com/CursedKeyboard/Stock-simulator/blob/master/account_creation.JPG)
 
 You will be navigated back to the very first screen. Here, choose load and select your newly created account! You may create as many accounts as you want so go ahead and try a different investing strategy for each one!
